@@ -1,0 +1,66 @@
+# The form Fenrir's "Share to the library" opens, filled in (core/recipes/share.py in Fenrir). The field ids are the ones
+# Fenrir fills: id, recipe, notes, live (yes, no or disk) and harness. tools/take.py reads the issue by these labels,
+# in this order, so a label changed here is changed there too.
+name: Submit a recipe
+description: Offer a recipe for a game or app server to Fenrir's community library. Fenrir's "Share to the library" fills this in for you.
+title: "Recipe: "
+labels: ["submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for sharing a recipe. When you send this, the library's checks run on it and turn it into a pull request: the schema, Fenrir's rules, a run of its whole life on a fake server, and each download's checksum. Fenrir's maker then reviews it.
+
+        Nothing from the library runs on anyone's PC until they have read what is inside it in Fenrir and said yes. To change your submission later, edit this issue's description, and the checks run again.
+  - type: input
+    id: id
+    attributes:
+      label: Recipe id
+      description: The recipe's id, the same as the "id" inside it. Lower-case letters, digits and dashes, starting with a letter.
+      placeholder: satisfactory
+    validations:
+      required: true
+  - type: textarea
+    id: recipe
+    attributes:
+      label: Recipe
+      description: The whole recipe.json. If Fenrir put it on your clipboard, paste it here.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Research notes
+      description: Where the facts come from (the game's own server guide, its developers' notes, the pages you read), what happened when it ran, and anything odd about it. They become the entry's README.md.
+    validations:
+      required: true
+  - type: dropdown
+    id: live
+    attributes:
+      label: Live run
+      description: "Did the recipe run on a real server on your PC? yes: it ran and passed. no: not tried. disk: not possible, because the disk has no room for the game's server."
+      options:
+        - "yes"
+        - "no"
+        - "disk"
+    validations:
+      required: true
+  - type: input
+    id: harness
+    attributes:
+      label: Harness on your PC
+      description: What Fenrir's check on a fake server said on your PC. Fenrir fills this in; the library runs it again.
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmations
+      options:
+        - label: This game has no anti-cheat, or its server runs with it off
+          required: true
+        - label: Nothing here needs an account to download
+          required: true
+        - label: I may share these facts under CC0
+          required: true

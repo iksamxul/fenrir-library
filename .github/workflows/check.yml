@@ -1,0 +1,440 @@
+# The library's checks (docs/v3-design/library.md section 3.3, in Fenrir's own repository). Every submission, made with
+# the issue form or as a pull request, gets the same checks: the schema, the policy, the fake-server harness, the
+# downloads' hashes and "What is inside", then one report.
+#
+# How it keeps itself safe:
+# - It runs on issues and pull_request, never pull_request_target, so a fork's code never runs with this repository's
+#   write token.
+# - Nothing is granted by default (permissions: {} below). Each job asks for the least it needs.
+# - The issue job reads the form as text with tools/take.py (Python's standard library only, nothing of Fenrir) and
+#   runs nothing from it. It writes recipes/<id>/ into the branch submission/<issue> and opens a pull request. It is
+#   the only job that can write to the repository.
+# - The checks can only read. They run the tools of the library's own main branch (never a pull request's copy of
+#   them), and read the submission's folder as data. The harness runs fakes only and reaches nothing beyond 127.0.0.1.
+# - The downloads job only fetches and hashes, within 2 GB and 10 minutes a file. It never runs or unpacks anything.
+# - Text from a submission never becomes part of a command: it reaches the scripts through files and environment
+#   variables, and the report shows it inside code blocks.
+# - The only actions are GitHub's own, pinned by full commit hash.
+#
+# A pull request made by this workflow does not start the workflow again (GitHub's rule for its own token), so a
+# submission from the issue form is checked in the issue's run, on the commit it put on the branch; the report sets
+# that commit's status, so the pull request shows the result. Run it by hand (Actions, Library checks, Run workflow)
+# to test the tools on GitHub's Windows and Linux runners with examples/example-valheim.
+
+name: Library checks
+
+on:
+  issues:
+    types: [opened, edited, labeled, reopened]
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: library-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PYTHON_VERSION: "3.14"
+
+jobs:
+  take-issue:
+    name: 1. Take the submission (issue form)
+    if: >-
+      github.event_name == 'issues' && github.event.issue.state == 'open' &&
+      contains(github.event.issue.labels.*.name, 'submission') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'submission')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      answer: ${{ steps.take.outputs.answer }}
+      ok: ${{ steps.branch.outputs.ok }}
+      id: ${{ steps.take.outputs.id }}
+      head: ${{ steps.branch.outputs.head }}
+      pr: ${{ steps.branch.outputs.pr }}
+    steps:
+      - name: The library's main branch, for its tools (credentials kept for the push below)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Read the form, as text
+        id: take
+        run: python -I tools/take.py issue --event "$GITHUB_EVENT_PATH" --out "$RUNNER_TEMP/submission"
+      - name: Put it on the branch submission/<issue>, and open a pull request
+        id: branch
+        if: steps.take.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ID: ${{ steps.take.outputs.id }}
+          ANSWER: ${{ steps.take.outputs.answer }}
+          ISSUE: ${{ github.event.issue.number }}
+          MAIN: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          say() { python -I -c 'import json, os, sys; print(json.loads(os.environ["ANSWER"])[sys.argv[1]])' "$1"; }
+          branch="submission/$ISSUE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch --create "$branch"
+          mkdir -p "recipes/$ID"
+          cp "$RUNNER_TEMP/submission/recipe.json" "$RUNNER_TEMP/submission/README.md" "recipes/$ID/"
+          git add -- "recipes/$ID"
+          if git diff --cached --quiet; then
+            echo "::error::recipes/$ID is already in the library exactly as submitted: there is nothing to check."
+            exit 1
+          fi
+          git commit --quiet -m "$(say message)"
+          git push --force --quiet origin "HEAD:refs/heads/$branch"
+          echo "head=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          pr=$(gh pr list --head "$branch" --base "$MAIN" --state open --json number --jq '.[0].number // empty')
+          if [ -z "$pr" ]; then
+            gh pr create --head "$branch" --base "$MAIN" --title "$(say title)" --body-file "$RUNNER_TEMP/submission/pr-body.md" > /dev/null
+            pr=$(gh pr list --head "$branch" --base "$MAIN" --state open --json number --jq '.[0].number')
+          fi
+          echo "pr=$pr" >> "$GITHUB_OUTPUT"
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+          echo "recipes/$ID is on $branch, in pull request #$pr"
+
+  take-pr:
+    name: 1. Take the submission (pull request)
+    if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      answer: ${{ steps.take.outputs.answer }}
+      ok: ${{ steps.take.outputs.ok }}
+      id: ${{ steps.take.outputs.id }}
+    steps:
+      - name: The library's own tools, at the pull request's base
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: The files the pull request changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --jq '.[] | {filename, status, previous_filename}' > "$RUNNER_TEMP/files.jsonl"
+      - name: One recipe's folder, and nothing else
+        id: take
+        run: python -I tools/take.py pr --files "$RUNNER_TEMP/files.jsonl" --base .
+
+  submission:
+    name: The submission
+    needs: [take-issue, take-pr]
+    if: ${{ !cancelled() && (needs.take-issue.outputs.ok == 'true' || needs.take-pr.outputs.ok == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    outputs:
+      id: ${{ needs.take-issue.outputs.id || needs.take-pr.outputs.id }}
+      base: ${{ github.event_name == 'issues' && github.sha || github.event.pull_request.base.sha }}
+      head: ${{ github.event_name == 'issues' && needs.take-issue.outputs.head || github.event.pull_request.head.sha }}
+    steps:
+      - name: What is checked, and with what
+        env:
+          ID: ${{ needs.take-issue.outputs.id || needs.take-pr.outputs.id }}
+          BASE: ${{ github.event_name == 'issues' && github.sha || github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event_name == 'issues' && needs.take-issue.outputs.head || github.event.pull_request.head.sha }}
+        run: echo "recipes/$ID at commit $HEAD, checked with the tools at commit $BASE"
+
+  schema:
+    name: 2. Schema
+    needs: submission
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      result: ${{ steps.check.outputs.result }}
+    steps:
+      - name: The library's own tools, from its main branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.submission.outputs.base }}
+          persist-credentials: false
+      - name: The submission, as data only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.submission.outputs.head }}
+          path: .submission
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: jsonschema, the second opinion (exact versions, wheels only)
+        run: |
+          python -m pip install --disable-pip-version-check --no-deps --only-binary=:all: -r tools/requirements.txt
+      - name: The schema, by jsonschema and by Fenrir's own validator
+        id: check
+        env:
+          ID: ${{ needs.submission.outputs.id }}
+        run: python -I tools/check.py schema ".submission/recipes/$ID"
+
+  policy:
+    name: 3. Policy
+    needs: submission
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      result: ${{ steps.check.outputs.result }}
+      platforms: ${{ steps.check.outputs.platforms }}
+    steps:
+      - name: The library's own tools, from its main branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.submission.outputs.base }}
+          persist-credentials: false
+      - name: The submission, as data only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.submission.outputs.head }}
+          path: .submission
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Fenrir's rules for a library recipe, and the library's own
+        id: check
+        env:
+          ID: ${{ needs.submission.outputs.id }}
+        run: python -I tools/check.py policy ".submission/recipes/$ID"
+
+  harness-windows:
+    name: 4. Harness on Windows
+    needs: [submission, policy]
+    if: contains(fromJSON(needs.policy.outputs.platforms || '[]'), 'windows')
+    runs-on: windows-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      result: ${{ steps.check.outputs.result }}
+    steps:
+      - name: The library's own tools, from its main branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.submission.outputs.base }}
+          persist-credentials: false
+      - name: The submission, as data only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.submission.outputs.head }}
+          path: .submission
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: The recipe's whole life with fakes, nothing beyond 127.0.0.1
+        id: check
+        env:
+          ID: ${{ needs.submission.outputs.id }}
+        run: python -I tools/check.py harness ".submission/recipes/$ID"
+
+  harness-linux:
+    name: 4. Harness on Linux
+    needs: [submission, policy]
+    if: contains(fromJSON(needs.policy.outputs.platforms || '[]'), 'linux')
+    # Fenrir's Linux harness is new: beside a Windows run it is shown only, and it decides alone for a Linux-only recipe
+    continue-on-error: ${{ contains(fromJSON(needs.policy.outputs.platforms || '[]'), 'windows') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      result: ${{ steps.check.outputs.result }}
+    steps:
+      - name: The library's own tools, from its main branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.submission.outputs.base }}
+          persist-credentials: false
+      - name: The submission, as data only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.submission.outputs.head }}
+          path: .submission
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: The recipe's whole life with fakes, nothing beyond 127.0.0.1
+        id: check
+        env:
+          ID: ${{ needs.submission.outputs.id }}
+        run: python -I tools/check.py harness ".submission/recipes/$ID"
+
+  downloads:
+    name: 5. Downloads
+    needs: [submission, policy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    outputs:
+      result: ${{ steps.check.outputs.result }}
+    steps:
+      - name: The library's own tools, from its main branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.submission.outputs.base }}
+          persist-credentials: false
+      - name: The submission, as data only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.submission.outputs.head }}
+          path: .submission
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Each download fetched and hashed (never written, run or unpacked)
+        id: check
+        env:
+          ID: ${{ needs.submission.outputs.id }}
+        run: python -I tools/check.py downloads ".submission/recipes/$ID"
+
+  inside:
+    name: 6. What is inside
+    needs: [submission, policy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      result: ${{ steps.check.outputs.result }}
+    steps:
+      - name: The library's own tools, from its main branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.submission.outputs.base }}
+          persist-credentials: false
+      - name: The submission, as data only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.submission.outputs.head }}
+          path: .submission
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: What Fenrir's trust prompt shows
+        id: check
+        env:
+          ID: ${{ needs.submission.outputs.id }}
+        run: python -I tools/check.py inside ".submission/recipes/$ID"
+
+  report:
+    name: 7. Report
+    needs: [take-issue, take-pr, submission, schema, policy, harness-windows, harness-linux, downloads, inside]
+    if: ${{ !cancelled() && (needs.take-issue.result != 'skipped' || needs.take-pr.result != 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      statuses: write
+    steps:
+      - name: The library's own tools, from its main branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Write the report
+        env:
+          SOURCE: ${{ github.event_name }}
+          TAKE: ${{ needs.take-issue.outputs.answer || needs.take-pr.outputs.answer }}
+          SCHEMA: ${{ needs.schema.outputs.result }}
+          POLICY: ${{ needs.policy.outputs.result }}
+          HARNESS_WINDOWS: ${{ needs.harness-windows.outputs.result }}
+          HARNESS_LINUX: ${{ needs.harness-linux.outputs.result }}
+          DOWNLOADS: ${{ needs.downloads.outputs.result }}
+          INSIDE: ${{ needs.inside.outputs.result }}
+          RESULT_SCHEMA: ${{ needs.schema.result }}
+          RESULT_POLICY: ${{ needs.policy.result }}
+          RESULT_HARNESS_WINDOWS: ${{ needs.harness-windows.result }}
+          RESULT_HARNESS_LINUX: ${{ needs.harness-linux.result }}
+          RESULT_DOWNLOADS: ${{ needs.downloads.result }}
+          RESULT_INSIDE: ${{ needs.inside.result }}
+          ISSUE: ${{ github.event.issue.number }}
+          PR: ${{ needs.take-issue.outputs.pr || github.event.pull_request.number }}
+          HEAD: ${{ needs.submission.outputs.head }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: python -I tools/report.py --out "$RUNNER_TEMP/report"
+      - name: Post it on the pull request and the issue, and set the commit's status
+        # a fork's pull request gets a read-only token: its report is this run's summary, and its checks show on it
+        if: github.event_name == 'issues' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE: ${{ github.event_name }}
+          ISSUE: ${{ github.event.issue.number }}
+          PR: ${{ needs.take-issue.outputs.pr || github.event.pull_request.number }}
+          HEAD: ${{ needs.submission.outputs.head }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          comment() {
+            id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$1/comments" \
+              --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- fenrir-library-report -->"))) | .id' | head -n 1)
+            if [ -n "$id" ]; then
+              gh api --silent -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F "body=@$2"
+            else
+              gh api --silent -X POST "repos/$GITHUB_REPOSITORY/issues/$1/comments" -F "body=@$2"
+            fi
+          }
+          state=$(cat "$RUNNER_TEMP/report/state")
+          if [ -n "$PR" ]; then comment "$PR" "$RUNNER_TEMP/report/pr.md"; fi
+          if [ -n "$ISSUE" ]; then comment "$ISSUE" "$RUNNER_TEMP/report/issue.md"; fi
+          if [ "$SOURCE" = issues ] && [ -n "$HEAD" ]; then
+            if [ "$state" = success ]; then said="Every check passed"; else said="A check did not pass: see the report"; fi
+            gh api --silent -X POST "repos/$GITHUB_REPOSITORY/statuses/$HEAD" \
+              -f state="$state" -f context="Library checks" -f description="$said" -f target_url="$RUN"
+          fi
+      - name: The verdict
+        run: test "$(cat "$RUNNER_TEMP/report/state")" = success
+
+  selftest:
+    name: The tools on ${{ matrix.os }}
+    if: github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: jsonschema, the second opinion (exact versions, wheels only)
+        run: |
+          python -m pip install --disable-pip-version-check --no-deps --only-binary=:all: -r tools/requirements.txt
+      - name: The example entry through every check but the downloads
+        run: python -I tools/check.py all examples/example-valheim
