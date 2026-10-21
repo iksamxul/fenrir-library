@@ -268,7 +268,7 @@
         "encoding": {"enum": ["utf-8", "utf-8-sig", "cp1252"], "default": "utf-8"},
         "hook": {"type": "string", "pattern": "^[a-z]+\\.[a-z_]+$", "description": "format hook, built-in recipes only (FiveM's server.cfg with its ensure lines)."},
         "when": {"enum": ["start", "save"], "default": "start", "description": "Written at every start (2.x write_config) or when the host saves the setting."},
-        "keepIfSet": {"type": "array", "maxItems": 20, "items": {"type": "string", "maxLength": 200},
+        "once": {"type": "boolean", "description": "Write the file only while it is not there: a default the server itself would make on its first start and then stop for (Sons of the Forest's ownerswhitelist.txt), which the host edits afterwards."}, "keepIfSet": {"type": "array", "maxItems": 20, "items": {"type": "string", "maxLength": 200},
           "description": "ini-tuple: keys left as the file has them when it already gives them a value (a password the host set there themselves)."}}},
 
     "probe": {"type": "object", "additionalProperties": false, "minProperties": 1, "maxProperties": 2,

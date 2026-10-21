@@ -17,7 +17,7 @@ from pathlib import Path
 
 from ..util import FROZEN, ROOT
 
-CREATE_NO_WINDOW = 0x08000000
+CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0
 
 
 def send(pid):

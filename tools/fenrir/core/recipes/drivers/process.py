@@ -32,7 +32,7 @@ from .. import load, policy, probes, values, writers
 from .. import players as player_sources
 from . import Driver, SettingRefused, UseButton
 
-CREATE_NO_WINDOW = 0x08000000
+CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0
 READY_EVERY = 2.0  # seconds between ready checks while a server starts: a page polls more often than that
 GRACE = 45  # stop.grace's default (2.x stopWait)
 READY_TIMEOUT = 300  # a recipe that says how it is ready but not how long it may take

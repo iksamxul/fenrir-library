@@ -99,8 +99,11 @@ def _k32():
 
 
 def alive(pid):
-    if os.name != "nt" or not pid:
+    if not pid:
         return False
+    if os.name != "nt":  # the kernel's own word (core/oslayer: /proc, never a zombie)
+        from .oslayer import alive as running
+        return running(pid)
     k = _k32()
     h = k.OpenProcess(0x1000, False, int(pid))  # PROCESS_QUERY_LIMITED_INFORMATION
     if not h:

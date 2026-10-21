@@ -148,7 +148,7 @@ class Fake:
         path = self.play.get("report")
         if not path:
             return
-        line = json.dumps({"t": round(self.elapsed(), 3), "event": event, **data}, ensure_ascii=False)
+        line = json.dumps({"t": round(self.elapsed(), 3), "wall": round(time.time(), 3), "event": event, **data}, ensure_ascii=False)
         with self.lock, open(path, "a", encoding="utf-8") as f:
             f.write(line + "\n")
 

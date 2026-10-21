@@ -16,7 +16,7 @@ from pathlib import Path
 
 from .util import ps_quote
 
-CREATE_NO_WINDOW = 0x08000000
+CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0
 DECLINED = 1223  # Windows' code for an administrator prompt the host said No to
 NO_SHELL = -1  # the service asked with no shell attached, or the shell never answered
 BAD_REQUEST = 87  # what the shell answers a request of the wrong shape (ERROR_INVALID_PARAMETER)

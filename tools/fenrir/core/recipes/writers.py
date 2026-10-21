@@ -378,6 +378,8 @@ def write(w, ctx):
     """One writer of a recipe, with its templates filled from ctx (values.context). Returns the path written, or the one
     that was already as it should be."""
     path = values.real_path(w["file"], ctx, WRITE_ROOTS)
+    if w.get("once") and path.exists():  # 3.0: the server's own default file, which the host edits once it is there
+        return path
     enc, fmt = w.get("encoding", "utf-8"), w["format"]
     src = values.real_path(w["from"], ctx, READ_ROOTS) if w.get("from") else path
     try:

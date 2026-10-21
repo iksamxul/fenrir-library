@@ -320,8 +320,9 @@ def record(recipe, choice, platform=None):
         d = _load()
         d["answers"][sha] = {"id": doc.get("id"), "version": doc.get("version"), "source": getattr(recipe, "source", None), "answer": choice,
                              "at": time.time()}
-        if choice != "no":
-            d["trusted"][_key(recipe)] = {"sha256": sha, "facts": facts(doc, platform), "at": time.time()}
+        if choice != "no":  # this machine's view, as prompt() compares it: on Linux a recipe's linux overrides are in both
+            from . import load
+            d["trusted"][_key(recipe)] = {"sha256": sha, "facts": facts(doc, platform or load.here()[0]), "at": time.time()}
         _save(d)
     return choice != "no"
 

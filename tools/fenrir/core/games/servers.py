@@ -23,7 +23,7 @@ from ..util import DATA
 from gamekit import a2s
 
 HOME = DATA / "games" / "servers"
-CREATE_NO_WINDOW = 0x08000000
+CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0
 MARK = "--- started by Fenrir"
 _CODES = {}  # (server, pid, start time) -> the join code that run printed
 LOG_ROLL = 16 * 1024 * 1024  # a log past this is kept once as server.old.log at the next start: it never grows without end (2.3)

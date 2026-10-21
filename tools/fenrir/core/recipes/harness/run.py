@@ -180,6 +180,8 @@ class Run:
         ctx = self.drv.context(self.inst, self.inst.doc(), vals)
         out = P.play(self.inst.doc(), vals, ctx, "", **flags)
         out["expectArgs"] = [moved(a, self.moves) for a in out["expectArgs"]] if out["expectArgs"] is not None else None
+        if "args" in (((self.doc.get("platformOverrides") or {}).get(self.platform) or {}).get("run") or {}):
+            out["expectArgs"] = None  # written for the recipe's own arguments: this platform's override has its own (7 Days to Die on Linux)
         for f in out["expectFiles"]:
             f["expect"] = {k: moved(v, self.moves) for k, v in f["expect"].items()}
         return out
@@ -398,7 +400,8 @@ class Run:
         names. The first ask waits for the schedule to get there, since Steam's player query remembers who was on for
         ten seconds (core/games/a2splayers.py): asked too early, it would still say so after they came."""
         started = self.fake_said("started")
-        t0 = time.time() - (started[0]["t"] if started else 0)
+        # when the fake's clock began: its report says the wall time too, so a report read late does not move the schedule
+        t0 = (started[0]["wall"] - started[0]["t"]) if started and "wall" in started[0] else time.time() - (started[0]["t"] if started else 0)
         time.sleep(max(0.0, t0 + not_before + 0.3 - time.time()))
         last = None
         while time.time() - t0 < limit_from_start + 12:

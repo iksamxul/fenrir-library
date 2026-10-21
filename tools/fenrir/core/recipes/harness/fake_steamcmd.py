@@ -119,10 +119,13 @@ def runner(state_path):
 
 
 def home(folder):
-    """A SteamCMD folder with a stand-in steamcmd.exe in it, so Fenrir's ensure() finds SteamCMD and fetches nothing."""
+    """A SteamCMD folder with a stand-in steamcmd.exe in it, so Fenrir's ensure() finds SteamCMD and fetches nothing; and
+    a stand-in steamcmd.sh, the name ensure() looks for on Linux (core/games/steamcmd.py exe), where it would otherwise
+    fetch Valve's steamcmd_linux.tar.gz."""
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / "steamcmd.exe").write_text("Fake SteamCMD for Fenrir's recipe harness.\n", "utf-8")
+    for name in ("steamcmd.exe", "steamcmd.sh"):
+        (folder / name).write_text("Fake SteamCMD for Fenrir's recipe harness.\n", "utf-8")
     return folder
 
 
