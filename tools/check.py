@@ -17,11 +17,13 @@ The checks are Fenrir's own, from the pinned copy in tools/fenrir/ (tools/MANIFE
 with Fenrir's data kept in a new temporary folder, never a real Fenrir's. Fenrir checks everything again on its
 maker's PC before anything is signed, and again on every PC before anything is used: these checks are the first
 of three, not the only one."""
+import atexit
 import hashlib
 import http.client
 import ipaddress
 import json
 import os
+import shutil
 import sys
 import tempfile
 import time
@@ -63,7 +65,9 @@ def fenrir():
     if str(FENRIR) not in sys.path:
         sys.path.insert(0, str(FENRIR))
     if not os.environ.get("FENRIR_LIBRARY_DATA"):
-        os.environ["FENRIR_LIBRARY_DATA"] = tempfile.mkdtemp(prefix="fenrir-library-data-")
+        data = tempfile.mkdtemp(prefix="fenrir-library-data-")
+        os.environ["FENRIR_LIBRARY_DATA"] = data
+        atexit.register(shutil.rmtree, data, True)  # the folder goes when the check ends
     os.environ["FENRIR_DATA"] = os.environ["FENRIR_LIBRARY_DATA"]
 
 
