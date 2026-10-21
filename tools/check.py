@@ -253,8 +253,9 @@ def step_policy(folder, r):
         took = "did not finish in time" if s.get("ms") is None else f"took {round(s['ms'])} ms"
         r.fails.append(f"{s['where']}: the pattern {s['pattern']!r} {took} on one 4 KB line made to be slow.")
     if r.ok:
+        looked = f"{len(warns)} thing(s) for the reviewer to look at" if warns else "nothing"
         r.notes.append(f"{rec.id} {rec.version}: Fenrir's rules for a library recipe hold (anti-cheat, sources, paths, programs, "
-                       f"downloads, secrets); the id is free; {len(pats)} patterns timed; the share check found nothing")
+                       f"downloads, secrets); the id is free; {len(pats)} patterns timed; the share check found {looked}")
 
 
 # ---------------------------------------------------------------------------------------------------- step 4: harness
