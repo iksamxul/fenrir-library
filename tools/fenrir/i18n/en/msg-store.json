@@ -1,0 +1,12 @@
+{
+ "msg.store.changed": "Changed {label}",
+ "msg.store.removed": "Removed {label}",
+ "msg.store.signed_out": "Signed every device out: phones, command lines and AI apps pair again. Friends' links keep working.",
+ "msg.store.copied": "Copied {name}'s connection string",
+ "msg.share.kept": "{file} holds a secret Fenrir keeps ({what}): take it out, and replace it, since it has been in a file",
+ "msg.share.format": "{file} holds {what}: take it out (and replace it, since it has been in a file)",
+ "msg.backup.secrets_sealed": "The backup holds {n} secrets, sealed with your passphrase",
+ "msg.backup.passphrase_short": "A passphrase for the backup's secrets is {n} characters or more.",
+ "msg.settings.friend_keys": "Friends' keys change in Friends, never through the settings.",
+ "msg.backup.secrets_retype": "The backup's secrets were not put back: {names}. Type them again in Settings, or restore again with the right passphrase."
+}

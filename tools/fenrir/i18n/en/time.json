@@ -1,0 +1,12 @@
+{
+  "time.just_now": "just now",
+  "time.never": "never",
+  "time.under_a_minute": "under a minute",
+  "time.off": "off",
+  "time.in.minutes": "{n, plural, one {in # minute} other {in # minutes}}",
+  "time.in.hours": "{n, plural, one {in # hour} other {in # hours}}",
+  "time.in.days": "{n, plural, one {in # day} other {in # days}}",
+  "time.ago.minutes": "{n, plural, one {# minute ago} other {# minutes ago}}",
+  "time.ago.hours": "{n, plural, one {# hour ago} other {# hours ago}}",
+  "time.ago.days": "{n, plural, one {# day ago} other {# days ago}}"
+}

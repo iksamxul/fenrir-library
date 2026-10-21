@@ -1,0 +1,9 @@
+# What the schema job installs beside the standard library: jsonschema, the second opinion on the recipe schema
+# (docs/v3-design/recipes.md section 6, point 1), with exactly the packages it needs at the versions Fenrir's own
+# tests use. The workflow installs them with --no-deps --only-binary=:all:, so nothing else comes along and no
+# package's own build code runs. Nothing else in tools/ needs anything but Python's standard library.
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+referencing==0.37.0
+rpds-py==2026.6.3
+attrs==26.1.0

@@ -1,0 +1,15 @@
+{
+  "msg.auth.forbidden": "This key is not allowed to do that.",
+  "msg.auth.missing": "Fenrir needs to know who is asking. Send a key.",
+  "msg.auth.unknown": "Fenrir does not know this key.",
+  "msg.body.deep": "The body's JSON nests more than {limit} levels deep.",
+  "msg.body.json": "The body is not JSON that Fenrir can read.",
+  "msg.body.length": "Send the body's length in bytes, as Content-Length.",
+  "msg.body.object": "The body must be a JSON object.",
+  "msg.body.too_large": "That is more than this address takes: {limit} bytes at most.",
+  "msg.door.host": "Fenrir answers this only at its own address on this PC.",
+  "msg.engine.bug": "Something went wrong inside Fenrir. The details are in Fenrir's log.",
+  "msg.route.method": "This address does not take {method} requests.",
+  "msg.route.not_found": "There is nothing at this address.",
+  "msg.server.not_found": "There is no such server here."
+}

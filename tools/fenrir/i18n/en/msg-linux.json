@@ -1,0 +1,8 @@
+{
+  "msg.custom.args_nul": "The arguments may not hold a null character.",
+  "msg.custom.args_quote": "The arguments have a quote mark that is not closed: close it.",
+  "msg.custom.not_runnable": "Choose a program this machine can run: one whose execute permission is set (chmod +x), such as the server's start script. For a .jar, .js or .py, choose java, node or python and put the file in the arguments.",
+  "msg.tools.no_build": "{tool} has no build for {system} on this processor ({arch}).",
+  "msg.tools.steamcmd_arm": "SteamCMD, which installs Steam's dedicated servers, is made for x86 PCs only, so Steam's game servers cannot run on this ARM machine. Minecraft worlds and apps can.",
+  "msg.tools.java_no_build": "Java has no build from Adoptium for this processor ({arch})."
+}

@@ -1,0 +1,7 @@
+PLACEHOLDER: NOT DECIDED YET. Fenrir's maker decides this before the repository is published.
+
+This covers tools/ (tools/fenrir/ is copied from Fenrir; check.py, take.py and report.py were written for this
+library) and schema/recipe-1.json. The CC0-1.0 dedication in ../LICENSE covers the recipe data only: recipes/,
+examples/ and revoked.json.
+
+Fenrir itself carries no licence file today.

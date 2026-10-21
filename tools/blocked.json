@@ -1,0 +1,55 @@
+{
+ "about": "The game kit's anti-cheat lists (fenrir/gamekit/catalog.py), copied at each Fenrir release by fenrir/build/library_tools.py. A recipe whose client ids or name are here is refused: Fenrir hosts no server for a game whose anti-cheat cannot be switched off. A game in noeac is played with its anti-cheat off, so its recipe must say antiCheat off.",
+ "steam": {
+  "1070580": "Drift86",
+  "1085660": "Destiny 2",
+  "1097150": "Fall Guys",
+  "1172470": "Apex Legends",
+  "1203220": "Naraka: Bladepoint",
+  "1286830": "Star Wars: The Old Republic",
+  "1517290": "Battlefield 2042",
+  "1599340": "Lost Ark",
+  "1665460": "eFootball",
+  "1782210": "Crab Game",
+  "1938090": "Call of Duty",
+  "2073850": "The Finals",
+  "230410": "Warframe",
+  "2357570": "Overwatch 2",
+  "2507950": "Delta Force",
+  "252490": "Rust",
+  "2767030": "Marvel Rivals",
+  "359550": "Rainbow Six Siege",
+  "381210": "Dead by Daylight",
+  "570": "Dota 2",
+  "578080": "PUBG: Battlegrounds",
+  "730": "Counter-Strike 2"
+ },
+ "epic": {
+  "Fortnite": "Fortnite",
+  "Sugar": "Rocket League"
+ },
+ "names": "^(?:pubg.*|counterstrike2|counterstrikeglobaloffensive|dota2|apexlegends.*|(?:tomclancys)?rainbowsix.*|destiny2.*|deadbydaylight|battlefield.*|thefinals|marvelrivals|overwatch.*|callofduty.*|rust|fallguys.*|naraka.*|efootball.*|deltaforce|lostark|warframe|starwarstheoldrepublic|crabgame|drift86|fortnite.*|rocketleague|valorant|leagueoflegends|haloinfinite|escapefromtarkov.*|huntshowdown.*|newworld(?:aeternum)?|genshinimpact|honkaistarrail|zenlesszonezero|wutheringwaves|throneandliberty|easportsfc.*|fifa\\d*|xdefiant|seaofthieves|eldenringnightreign|blackdesert.*|(?:tomclancys)?thedivision2|forhonor|skullandbones|thecrew.*|diabloiv|diablo4)$",
+ "noeac": [
+  {
+   "key": "eldenring",
+   "name": "Elden Ring",
+   "steam": [
+    "1245620"
+   ]
+  },
+  {
+   "key": "halomcc",
+   "name": "Halo: The Master Chief Collection",
+   "steam": [
+    "976730"
+   ]
+  },
+  {
+   "key": "sevendays",
+   "name": "7 Days to Die",
+   "steam": [
+    "251570"
+   ]
+  }
+ ]
+}
