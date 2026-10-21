@@ -1,0 +1,3 @@
+# Byte for byte: no line ending is ever changed, so a recipe hashes the same on every PC (the signed index names
+# each file by its SHA-256).
+* -text

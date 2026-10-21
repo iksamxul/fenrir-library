@@ -1,0 +1,281 @@
+{
+ "fenrirRecipe": 1,
+ "id": "example-valheim",
+ "version": "1.0.0",
+ "kind": "game",
+ "name": "Valheim (example entry)",
+ "summary": "An example of a library entry: Fenrir's own Valheim recipe under another id. Valheim's dedicated server, with an optional join code (crossplay) that needs no ports.",
+ "size": "about 1 GB",
+ "authors": [
+  {
+   "name": "Fenrir",
+   "github": "iksamxul"
+  }
+ ],
+ "license": "CC0-1.0",
+ "client": {
+  "steam": [
+   "892970"
+  ]
+ },
+ "antiCheat": {
+  "status": "none"
+ },
+ "platforms": {
+  "windows": {
+   "arch": [
+    "x64"
+   ]
+  },
+  "linux": {
+   "arch": [
+    "x64"
+   ],
+   "notes": "The Linux build from SteamCMD; not yet run on a real Linux server."
+  }
+ },
+ "get": {
+  "steamcmd": {
+   "app": 896660,
+   "anonymous": true
+  }
+ },
+ "run": {
+  "program": "valheim_server.exe",
+  "env": {
+   "SteamAppId": "892970"
+  },
+  "args": [
+   "-nographics",
+   "-batchmode",
+   "-name",
+   "{setting.name}",
+   "-port",
+   "{setting.port}",
+   "-world",
+   "{setting.world}",
+   "-password",
+   "{setting.password}",
+   "-public",
+   "{setting.public}",
+   "-savedir",
+   "{saves}",
+   {
+    "if": "setting.crossplay",
+    "args": [
+     "-crossplay"
+    ]
+   }
+  ],
+  "console": "none",
+  "output": "stdout"
+ },
+ "platformOverrides": {
+  "linux": {
+   "run": {
+    "program": "valheim_server.x86_64",
+    "env": {
+     "SteamAppId": "892970",
+     "LD_LIBRARY_PATH": "{install}/linux64"
+    }
+   }
+  }
+ },
+ "ports": [
+  {
+   "id": "game",
+   "port": "{setting.port}",
+   "proto": "udp",
+   "label": "Game"
+  },
+  {
+   "id": "query",
+   "port": "{setting.port+1}",
+   "proto": "udp",
+   "label": "Steam query"
+  }
+ ],
+ "saves": {
+  "path": "{data}/saves",
+  "how": "arg"
+ },
+ "settings": [
+  {
+   "key": "name",
+   "type": "text",
+   "label": "Server name",
+   "group": "basics",
+   "default": "Fenrir",
+   "maxLength": 120
+  },
+  {
+   "key": "world",
+   "type": "text",
+   "label": "World",
+   "group": "world",
+   "default": "Fenrir",
+   "maxLength": 120
+  },
+  {
+   "key": "port",
+   "type": "port",
+   "label": "Port",
+   "group": "network",
+   "default": 2456,
+   "min": 1024,
+   "max": 65000,
+   "span": 2
+  },
+  {
+   "key": "public",
+   "type": "switch",
+   "label": "Listed publicly",
+   "group": "network",
+   "default": false,
+   "as": {
+    "on": "1",
+    "off": "0"
+   }
+  },
+  {
+   "key": "crossplay",
+   "type": "switch",
+   "label": "Join code (crossplay)",
+   "group": "network",
+   "default": true,
+   "help": "Friends join with a six-digit code through Valheim's own relay: no ports, no VPN."
+  },
+  {
+   "key": "password",
+   "type": "secret",
+   "label": "Password",
+   "group": "basics",
+   "required": true,
+   "minLength": 5,
+   "notIn": [
+    "name"
+   ],
+   "inArgs": true,
+   "help": "At least 5 characters, and not part of the server's name (Valheim refuses both)."
+  }
+ ],
+ "ready": {
+  "any": [
+   {
+    "query": "a2s",
+    "on": "query"
+   },
+   {
+    "log": "with join code \\d{6}"
+   }
+  ],
+  "timeout": 300
+ },
+ "players": {
+  "sources": [
+   {
+    "via": "a2s",
+    "port": "query",
+    "names": true
+   },
+   {
+    "via": "log",
+    "count": "is active with (\\d+) player"
+   }
+  ]
+ },
+ "stop": {
+  "steps": [
+   {
+    "do": "ctrl-c"
+   }
+  ],
+  "grace": 60
+ },
+ "updates": {
+  "steam": {
+   "branch": "public"
+  },
+  "whenEmpty": true,
+  "warnMinutes": 5
+ },
+ "mods": {
+  "source": "thunderstore",
+  "community": "valheim",
+  "into": "{install}",
+  "travel": true
+ },
+ "join": {
+  "text": "In Valheim: Join game, Add server, {address}:{port.game}.",
+  "withCode": {
+   "code": "with join code (\\d{6})",
+   "text": "In Valheim: Join game, Add server, the join code {code}."
+  },
+  "steamArgs": [
+   "+connect",
+   "{address}:{port.game}"
+  ]
+ },
+ "needs": [
+  {
+   "setting": "password",
+   "say": "Set a password of at least 5 characters first."
+  }
+ ],
+ "tests": {
+  "harness": {
+   "settings": {
+    "name": "Harness",
+    "password": "harness1"
+   },
+   "expectArgs": [
+    "-nographics",
+    "-batchmode",
+    "-name",
+    "Harness",
+    "-port",
+    "2456",
+    "-world",
+    "Fenrir",
+    "-password",
+    "harness1",
+    "-public",
+    "0",
+    "-savedir",
+    "{saves}",
+    "-crossplay"
+   ],
+   "bootLines": [
+    "Fake Valheim server starting"
+   ],
+   "codeLine": "Session \"Harness\" with join code 123456 and IP 127.0.0.1:2456 is active with 0 player(s)",
+   "readyAfter": 2,
+   "countLine": "Session \"Harness\" with join code 123456 and IP 127.0.0.1:2456 is active with {n} player(s)",
+   "query": [
+    "a2s"
+   ],
+   "players": [
+    {
+     "name": "Sam",
+     "at": 3,
+     "leave": 8
+    },
+    {
+     "name": "Robin",
+     "at": 4
+    }
+   ],
+   "saveOn": [
+    "ctrl-c"
+   ],
+   "saveFile": "worlds_local/Fenrir.db",
+   "buildIds": [
+    "100",
+    "101"
+   ]
+  }
+ },
+ "research": {
+  "notes": "An example entry, never signed into the library: Fenrir's built-in Valheim recipe (fenrir/recipes/builtin/valheim.json) under the id example-valheim. Its facts are that recipe's, which came from Fenrir 2.x's Valheim server unchanged; the ready checks are new in 3.0. See README.md beside it."
+ }
+}
